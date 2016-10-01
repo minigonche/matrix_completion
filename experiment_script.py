@@ -6,7 +6,7 @@
 #This script uses exclusevly the library fancyimpute, focusing on the NuclearNormMinimization, since it implements the approach explained in the project
 
 
-from .nuclear_norm_minimization import NuclearNormMinimization
+from fancyimpute1 import NuclearNormMinimization
 #For the definition of matrices:
 import numpy as np
 #For pseudorandom number generation 
