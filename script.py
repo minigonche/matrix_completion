@@ -1,59 +1,122 @@
+#Felipe Gonzalez Casabianca
+# Source code for the experiments of the first project of the course: 
+# Introduccion to Convex Optimization 
+# This script uses exclusevly the library fancyimpute, focusing on the 
+# NuclearNormMinimization, since it implements the approach explained in 
+# the project
+
+#-------- Script Imports ------------
+#For simple syntax divition
+from __future__ import division
+#The main library
 from fancyimpute import NuclearNormMinimization
+#For the definition of matrices:
 import numpy as np
+#For pseudorandom number generation 
+import random as rand
+#For math operation
+import math
 
-from low_rank_data import XY, XY_incomplete, missing_mask
-from common import reconstruction_error
 
 
-def create_rank1_data(symmetric=False):
+#-------- Random Orthogonal Vector Sets ------------
+# This code constructs pseudorandom sets of orthogonal vectors,
+# using the gram schmit process to orthogonalize the random vectors
+
+
+#The gram schmit coeficient
+def gs_cofficient(v1, v2):
+    return np.dot(v2, v1) / np.dot(v1, v1)
+
+#Multiply a vector by a coefficient
+def multiply(cofficient, v):
+    return map((lambda x : x * cofficient), v)
+
+#Calculates the projection of v2 onto v1
+def proj(v1, v2):
+    return multiply(gs_cofficient(v1, v2) , v1)
+    
+#Calclates the norm of the given vector    
+def norm(v1):
+    return math.sqrt(np.dot(v1, v1))
+    
+#Generates a random vector    
+def random_vector(dim):
+    vec = []
+    for i in range(dim):
+        vec.append(rand.uniform(-1, 1))
+        
+    if(norm(vec) == 0):
+        return random_vector(dim)
+        
+    return vec
+
+#Generates a random positive vector
+def random_postive_vector(dim,max_value):
+    vec = []
+    for i in range(dim):
+        vec.append(rand.uniform(0, max_value))
+        
+    if(norm(vec) == 0):
+        return random_vector(dim)
+        
+    return vec
+
+#Genrates a random orthonormal set of vectors
+def random_ortho_set(n, dim):
     """
-    Returns 5x5 rank1 matrix with missing element at index (1, 2)
+        Parameters
+        ----------
+        n : int
+            The number of vectors in the set
+        dim : int
+            The dimention of the vectors
     """
-    x = np.array([1, 2, 3, 4, 5], dtype=float)
-    y = np.array([0.1, -0.1, 0.2, -0.2, 0.02])
-    XY = np.outer(x, y)
-    XY_missing = XY.copy()
-    # drop one entry
-    XY_missing[1, 2] = np.nan
+    if(n > dim):
+        raise ValueError('''The size of the linearly independent set cannot be 
+        grater than the dimention of the vectors''')
 
-    if not symmetric:
-        return XY, XY_missing
+    Y = []
+    for i in range(n):
+        temp_vec = random_vector(dim)
+        for inY in Y :
+            # Finds the projection
+            proj_vec = proj(inY, temp_vec)
+            # Substracts the vector
+            temp_vec = map(lambda x, y : x - y, temp_vec, proj_vec)
+        #Normalizes the vector    
+        temp_vec = multiply(1/norm(temp_vec), temp_vec)    
+        Y.append(temp_vec)
+    return Y
 
-    # make a symmetric matrix
-    XYXY = XY.T.dot(XY)
+#-------- Random Orthogonal Model Matrix ------------
+# This code construct a random matrix using the random
+# orthgonal model
 
-    # drop one entry
-    XYXY_missing = XYXY.copy()
-    XYXY_missing[1, 2] = np.nan
-    return XYXY, XYXY_missing
+#Genrates a random matrix using the random orhonormal model
+def random_matrix(dim, r):
+    """
+        Parameters
+        ----------
+        dim : int
+            The dimention of the matrix (square)
+        r : int
+            The number of singular vectors
+    """
+    #First set of orthonormal vectors (single vectors)
+    set1 = random_ortho_set(r,dim)
+    #Second set of orthonormal vectors (single vectors)
+    set2 = random_ortho_set(r,dim)
+    #Set of single values
+    sing_values = random_postive_vector(r,50)
+    
+    #generates the matrix
+    M = sing_values[0]*np.matrix(set1[0]).transpose()*np.matrix(set2[0])
+    for i in range(1,r):
+        temp = np.matrix(set1[i]).transpose()*np.matrix(set2[i])
+        M = M + sing_values[i]*temp
+    
+    return M
 
-
-def test_rank1_convex_solver():
-    XY_rank1, XY_missing_rank1 = create_rank1_data(symmetric=False)
-    XY_completed_rank1 = NuclearNormMinimization().complete(XY_missing_rank1)
-    assert abs(XY_completed_rank1[1, 2] - XY_rank1[1, 2]) < 0.001, \
-        "Expected %0.4f but got %0.4f" % (
-            XY_rank1[1, 2], XY_completed_rank1[1, 2])
-
-
-def test_rank1_symmetric_convex_solver():
-    XYXY_rank1, XYXY_missing_rank1 = create_rank1_data(symmetric=True)
-    solver = NuclearNormMinimization(require_symmetric_solution=True)
-    completed = solver.complete(XYXY_missing_rank1)
-    assert abs(completed[1, 2] - XYXY_rank1[1, 2]) < 0.001, \
-        "Expected %0.4f but got %0.4f" % (
-            XYXY_rank1[1, 2], completed[1, 2])
-
-
-def test_nuclear_norm_minimization_with_low_rank_random_matrix():
-    solver = NuclearNormMinimization(require_symmetric_solution=False)
-    XY_completed = solver.complete(XY_incomplete[:100])
-    _, missing_mae = reconstruction_error(
-        XY[:100], XY_completed, missing_mask[:100], name="NuclearNorm")
-    assert missing_mae < 0.1, "Error too high!"
-
-if __name__ == "__main__":
-    test_rank1_convex_solver()
-    test_rank1_symmetric_convex_solver()
-    test_nuclear_norm_minimization_with_low_rank_random_matrix()
+print(random_matrix(5,3))    
 
