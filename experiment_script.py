@@ -16,11 +16,12 @@ total = 10
 
 
 m = 10*np.asmatrix( np.random.rand(total,total))
-m_incomplete = m
+m_incomplete = np.copy(m)
 
 for i in range(0,5):
     m_incomplete[rand.randint(0,total-1), rand.randint(0,total-1)] = np.nan
 
 m_complete = NuclearNormMinimization(fast_but_approximate=False).complete(m_incomplete)    
     
-
+print(m)
+print(m_complete)
