@@ -14,7 +14,7 @@ from fancyimpute import NuclearNormMinimization
 import numpy as np
 #For pseudorandom number generation 
 import random as rand
-#For math operation
+#For math simple operations
 import math
 
 
@@ -118,5 +118,42 @@ def random_matrix(dim, r):
     
     return M
 
-print(random_matrix(5,3))    
+    
 
+#Gets a matrix wth a certain number of observation of the given matrix.
+# this values are chosen uniformly at random and the rest of the values are
+# marked as NaN
+def get_observed_matrix(M, num_observations):
+    
+    n = M.shape[0]
+    total = n*n
+    empty_matrix = np.empty((n,n,))
+    empty_matrix[:] = np.NAN
+    empty_matrix = np.matrix(empty_matrix)
+
+    m_origin = np.copy(M)
+    m_dest = np.copy(empty_matrix)
+    flag = False
+    
+    # If the total amount of observations is to large, is better to simply
+    # remove values instead of adding
+    if(total/2 < num_observations):
+        m_origin = np.copy(empty_matrix)
+        m_dest = np.copy(M) 
+        num_observations = total - num_observations
+        flag = True
+        
+    for i in range(num_observations):
+        coor = [rand.randint(0,n-1),rand.randint(0,n-1)]
+        # Selects randomly untils the coordinate selected is idle
+        while(np.isnan(m_dest[coor[0],coor[1]]) == flag):
+            coor = [rand.randint(0,n-1),rand.randint(0,n-1)]
+            
+        #Updates the coordinate
+        m_dest[coor[0],coor[1]] = m_origin[coor[0],coor[1]]
+    
+    return m_dest        
+
+M = random_matrix(10,6)
+print 'matrix created'
+print get_observed_matrix( M ,75)    
