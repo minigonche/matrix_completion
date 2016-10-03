@@ -1,4 +1,4 @@
-#Felipe Gonzalez Casabianca
+# Felipe Gonzalez Casabianca
 # Source code for the experiments of the first project of the course: 
 # Introduccion to Convex Optimization 
 # This script uses exclusevly the library fancyimpute, focusing on the 
@@ -16,6 +16,10 @@ import numpy as np
 import random as rand
 #For math simple operations
 import math
+#For Graphing
+import plotly.plotly as py
+import plotly.graph_objs as go
+py.sign_in('minigonche', '8cjqqmkb4o') #This api-key has been changed already
 
 
 
@@ -154,6 +158,68 @@ def get_observed_matrix(M, num_observations):
     
     return m_dest        
 
-M = random_matrix(10,6)
-print 'matrix created'
-print get_observed_matrix( M ,75)    
+
+# ----------------------------------------------------------------------
+# ----------------------  Experiments  ---------------------------------
+# ----------------------------------------------------------------------
+
+# Graphs the mean percentage of the recovered matrix vs the amount of 
+# observed entries
+
+def graph_percentage_vs_observed(dim, ite, tries, r, tol, fast_but_approximate):
+
+    """
+        Parameters
+        ----------
+        dim : int
+            The dimention of the matrix (square)
+        ite : int 
+            The number of iterations per observations
+        tries : int
+            The number of values (evenly distributed) that the number of 
+            observations will take
+        r : int
+            The number of singular vectors
+        tol : float
+            The tolerance for two values to be considered equal
+        fast_but_approximate : bool
+            Use the faster but less accurate Splitting Cone Solver (part of
+            FancyImpute)    
+    """
+    
+    if(dim <= 1):
+        raise ValueError('''The dimention must be larger than 1''')
+        
+    total = dim*dim        
+    skip = (dim*dim - 1)/tries
+    m_values = np.arange(1,total + skip, skip)
+    
+    #The percentages
+    per = []
+    
+    for m in m_values:
+        for i in range(ite):
+            #Complete Random Matrix
+            initial_matrix = random_matrix(dim, r)
+            #Incomplete Matrix
+            incomplete_matrix = get_observed_matrix(initial_matrix, m)
+            #Guessed Matrix
+            guessed_matrix = NuclearNormMinimization(fast_but_approximate=
+            fast_but_approximate).complete(incomplete_matrix)
+            
+            #The boolean matrix indicating if two coordenates are equal 
+            # (with the given tolerance)
+            bool_matrix = np.isclose(initial_matrix, guessed_matrix,atol = tol)
+            percentage = sum(sum(bool_matrix))/total
+            #Saves percentage
+            per.append(percentage)
+    
+    trace_m = go.Scatter(x = m_values, y =  m_values/total, mode = 'Observed Percentage')
+    trace_r = go.Scatter(x = m_values, y =  per, mode = 'Recovered Percentage')
+    #plot_url = py.iplot([trace_m,trace_r])  
+
+
+graph_percentage_vs_observed(dim = 6, ite = 2, tries = 5, r= 5, tol = 0.001, fast_but_approximate = True)            
+            
+            
+
